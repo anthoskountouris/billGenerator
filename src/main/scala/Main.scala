@@ -1,20 +1,22 @@
 object Main extends MenuItem {
 
   // creation of the item objects which they includes enumeration
-  val cocaCola = ItemCaseClass("Cola - Cold", 0.50, TypeOfItem.drink, Temperature.cold)
-  val coffee = ItemCaseClass("Coffee - Hot", 1.00, TypeOfItem.drink, Temperature.hot)
-  val cheeseSandwich = ItemCaseClass("Cheese Sandwich - Cold", 2.00, TypeOfItem.food, Temperature.cold)
-  val steakSandwich = ItemCaseClass("Steak Sandwich - Hot",4.50, TypeOfItem.food, Temperature.hot)
+  val cocaCola = ItemCaseClass("Cola - Cold", 0.50, TypeOfItem.drink, Temperature.cold, Category.nonPremium)
+  val coffee = ItemCaseClass("Coffee - Hot", 1.00, TypeOfItem.drink, Temperature.hot, Category.nonPremium)
+  val cheeseSandwich = ItemCaseClass("Cheese Sandwich - Cold", 2.00, TypeOfItem.food, Temperature.cold, Category.nonPremium)
+  val steakSandwich = ItemCaseClass("Steak Sandwich - Hot",4.50, TypeOfItem.food, Temperature.hot, Category.nonPremium)
+  val lobster = ItemCaseClass("Lobster", 25, TypeOfItem.food, Temperature.hot, Category.premium)
 
   // Function that prints the menu
   def printMenu():Unit = {
     println("        Menu")
     println("---------------------")
 
-    println(s"1 - ${cocaCola.name}: £${cocaCola.price}")
-    println(s"2 - ${coffee.name}: £${coffee.price}")
-    println(s"3 - ${cheeseSandwich.name}: £${cheeseSandwich.price}")
-    println(s"4 - ${steakSandwich.name}: £${steakSandwich.price}")
+    println(s"1 - ${cocaCola.name}: £${cocaCola.price} (${if (cocaCola.cat == Category.nonPremium) "Non Premium" else "Premium"})")
+    println(s"2 - ${coffee.name}: £${coffee.price} (${if (coffee.cat == Category.nonPremium) "Non Premium" else "Premium"})")
+    println(s"3 - ${cheeseSandwich.name}: £${cheeseSandwich.price} (${if (cheeseSandwich.cat == Category.nonPremium) "Non Premium" else "Premium"})")
+    println(s"4 - ${steakSandwich.name}: £${steakSandwich.price} (${if (steakSandwich.cat == Category.nonPremium) "Non Premium" else "Premium"})")
+    println(s"5 - ${lobster.name}: £${lobster.price} (${if (lobster.cat == Category.nonPremium) "Non Premium" else "Premium"})")
     println("---------------------")
   }
 
@@ -24,23 +26,31 @@ object Main extends MenuItem {
     var serviceCharge:BigDecimal = 0
     val listOfPrices = listOfItems.map(x => x.price)
 
-    if (listOfItems.exists(_.typeOfItem == TypeOfItem.food) && listOfItems.exists(_.temp == Temperature.hot)) {
+    if (listOfItems.exists(_.cat == Category.premium)){
+      percent = 0.25
+      if (listOfPrices.sum * percent > 40){
+        serviceCharge = 40
+      } else {
+        serviceCharge = (listOfPrices.sum * percent).setScale(2, BigDecimal.RoundingMode.HALF_UP)
+      }
+    }
+    else if (listOfItems.exists(_.typeOfItem == TypeOfItem.food) && listOfItems.exists(_.temp == Temperature.hot)) {
 //      println("I am HERE 1")
       percent = 0.2
-      serviceCharge = listOfPrices.sum * percent
+      serviceCharge = (listOfPrices.sum * percent).setScale(2, BigDecimal.RoundingMode.HALF_UP)
     } else if (listOfItems.exists(_.typeOfItem == TypeOfItem.food)){
 //      println("I am HERE 2")
       percent = 0.1
       if (listOfPrices.sum * percent > 20){
         serviceCharge = 20
       } else {
-        serviceCharge = listOfPrices.sum * percent
+        serviceCharge = (listOfPrices.sum * percent).setScale(2, BigDecimal.RoundingMode.HALF_UP)
       }
     }else {
 //      println("I am HERE 3")
       percent = 1
     }
-    println(s"The Service Charge is: ${percent*100}%")
+    println(s"The Service Charge is: £${serviceCharge} (${(percent*100).toInt}%)")
     val result = listOfPrices.sum + serviceCharge
     result
 
@@ -52,19 +62,33 @@ object Main extends MenuItem {
   // Here Option was used because the input can be None
   // Also Either was used because the return value can be either or boolean
   def numberToItem(num:String):Either[Option[ItemCaseClass], Boolean] = {
-    if (num=="No") {
+    if (num == "No") {
       Right(false)
-    }else {
+    } else {
       num match {
         case "1" => Left(Some(cocaCola))
         case "2" => Left(Some(coffee))
         case "3" => Left(Some(cheeseSandwich))
         case "4" => Left(Some(steakSandwich))
+        case "5" => Left(Some(lobster))
         case _ => Left(None)
       }
     }
-
   }
+
+    def printBasket(listOfItems:List[ItemCaseClass]): Unit ={
+//      val clearedListOfItems:List[String] = listOfItems.map(x => x.name)
+//      println(clearedListOfItems)
+      val counts = listOfItems.groupBy(identity).mapValues(_.size).toMap
+      println(counts)
+      println("        Bill         ")
+      println("---------------------")
+      counts.foreach {
+        case (key, value) => println(s"${key.name}: £${key.price} x $value")
+      }
+      println("---------------------")
+    }
+
 
   // Main function
   def main(args: Array[String]): Unit = {
@@ -107,8 +131,10 @@ object Main extends MenuItem {
     }
     println(FinalListOfItem)
 
+
+    printBasket(FinalListOfItem)
     // Calculating the total cost
     cost = costCalculation(FinalListOfItem)
-    println(s"Total Cost: $cost")
+    println(s"Total Cost: £$cost")
   }
 }

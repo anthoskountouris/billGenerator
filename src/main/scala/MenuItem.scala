@@ -5,5 +5,5 @@ trait MenuItem {
 //  def itemPrice(item:ItemCaseClass):BigDecimal
   def costCalculation(listOfItems:List[ItemCaseClass]): BigDecimal
   def numberToItem(num:String):Either[Option[ItemCaseClass], Boolean]
-
+  def printBasket(listOfItems:List[ItemCaseClass]): Unit
 }
