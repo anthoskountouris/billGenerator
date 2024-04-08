@@ -1,3 +1,5 @@
+import scala.annotation.tailrec
+
 object Main extends MenuItem {
 
   // creation of the item objects which they includes enumeration
@@ -89,39 +91,31 @@ object Main extends MenuItem {
     }
 
   // Checking for Loyalty Card
-  def askingForLoyalty(listOfItems:List[ItemCaseClass]):(BigDecimal,BigDecimal) ={
+
+  @tailrec
+  def askingForLoyalty(listOfItems:List[ItemCaseClass], hasLoyalty:String, starsNo:Int):(BigDecimal,BigDecimal) ={
     val sumOfBasket = listOfItems.map(x => x.price).sum
-
-    print("Do you have a Loyalty card mate? (yes or no): ")
-    val hasLoyalty = scala.io.StdIn.readLine() // User input
-
     var loyaltyAmount:BigDecimal = 0
 
     if (hasLoyalty=="no"){
       (1,loyaltyAmount)
     }else if(hasLoyalty=="yes"){
-      print("How many stars do you have: ")
-      val startsNo = scala.io.StdIn.readLine().toInt // User input
-      val loyaltyPercentage:BigDecimal = startsNo match {
+      val loyaltyPercentage:BigDecimal = starsNo match {
         case x if 3 <= x && x <= 8 => 0.025 * x
         case x if x>8 => 0.025 * 8
         case _ => 0
       }
-      val loyaltyPercentageModified: BigDecimal = (loyaltyPercentage*100).setScale(2, BigDecimal.RoundingMode.HALF_UP)
+      val loyaltyPercentageModified: BigDecimal = (loyaltyPercentage*100).setScale(1, BigDecimal.RoundingMode.HALF_UP)
 //      println("loyaltyPercentage: " + loyaltyPercentageModified)
       loyaltyAmount = loyaltyAmount + (loyaltyPercentage * sumOfBasket)
 //      println("loyaltyAmount: " + loyaltyAmount)
 
-      (loyaltyPercentageModified.toInt,loyaltyAmount)
+      (loyaltyPercentageModified,loyaltyAmount.setScale(2, BigDecimal.RoundingMode.HALF_UP))
 
     } else{
-      askingForLoyalty(listOfItems)
+      askingForLoyalty(listOfItems,hasLoyalty,starsNo)
     }
   }
-
-//  def askingForStars(yesOrNo: String):BigDecimal ={
-//
-//  }
 
   // Main function
   def main(args: Array[String]): Unit = {
@@ -130,7 +124,7 @@ object Main extends MenuItem {
     printMenu()
     print("What would you like? (number): ")
 
-    var listOfItems:List[Either[Option[ItemCaseClass], Boolean]] = List() // List which stores both the Either ot Boolean
+    var listOfItems:List[Either[Option[ItemCaseClass], Boolean]] = List() // List which stores both the Either or Boolean
     var FinalListOfItem: List[ItemCaseClass] = List() // List to store the items/objects (without Some()etc)
     var continueLoop = true
 
@@ -153,7 +147,7 @@ object Main extends MenuItem {
       } else {
         listOfItems = listOfItems :+ item
 //        println(listOfItems)
-//        FinalListOfItem
+//        print(FinalListOfItem)
         print("Would you like something else? (number or no): ")
       }
     }
@@ -162,8 +156,18 @@ object Main extends MenuItem {
     FinalListOfItem = listOfItems.map {
       case Left(Some(x)) => x
     }
+//    println(FinalListOfItem)
 
-    val (loyaltyPerc:BigDecimal, loyaltyAmount:BigDecimal) = askingForLoyalty(FinalListOfItem)
+    print("Do you have a Loyalty card mate? (yes or no): ")
+    val hasLoyalty = scala.io.StdIn.readLine() // User input
+    var starsNo = 0
+    if(hasLoyalty=="yes"){
+      print("How many stars do you have: ")
+      starsNo = scala.io.StdIn.readLine().toInt // User input
+    }
+
+    val (loyaltyPerc:BigDecimal, loyaltyAmount:BigDecimal) = askingForLoyalty(FinalListOfItem, hasLoyalty, starsNo)
+    println("Output "+loyaltyPerc, loyaltyAmount)
 //     Printing the basket
     printBasket(FinalListOfItem)
     // Calculating the total cost
@@ -171,3 +175,9 @@ object Main extends MenuItem {
     println(s"Total Cost: £$cost")
   }
 }
+
+// NEED TO DO
+// ** LOYALTY DISCOUNT IS NOT APPLIED TO PREMIUM ITEMS ** //
+// FILTER LIST TO ITEMS WITH NO PREMIUM AND THEN CALCULATE //
+// ** AMEND TEST OF LOYALTY ** //
+// ** ADD TEST OF CALCULATION COST ** //
