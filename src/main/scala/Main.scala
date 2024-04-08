@@ -21,11 +21,12 @@ object Main extends MenuItem {
   }
 
   // Function which calculates the total cost
-  def costCalculation(listOfItems:List[ItemCaseClass]): BigDecimal = {
-    var percent:BigDecimal = 1
-    var serviceCharge:BigDecimal = 0
-    val listOfPrices = listOfItems.map(x => x.price)
+  def costCalculation(listOfItems:List[ItemCaseClass], loyaltyPerc:BigDecimal, loyaltyAmount:BigDecimal): BigDecimal = {
+    var percent:BigDecimal = 1 // percentage of service charge
+    var serviceCharge:BigDecimal = 0 // actual amount of service charge
+    val listOfPrices = listOfItems.map(x => x.price) // List of the prices of the items in the basket
 
+    // Conditions to add service charge in the total cost
     if (listOfItems.exists(_.cat == Category.premium)){
       percent = 0.25
       if (listOfPrices.sum * percent > 40){
@@ -35,11 +36,9 @@ object Main extends MenuItem {
       }
     }
     else if (listOfItems.exists(_.typeOfItem == TypeOfItem.food) && listOfItems.exists(_.temp == Temperature.hot)) {
-//      println("I am HERE 1")
       percent = 0.2
       serviceCharge = (listOfPrices.sum * percent).setScale(2, BigDecimal.RoundingMode.HALF_UP)
     } else if (listOfItems.exists(_.typeOfItem == TypeOfItem.food)){
-//      println("I am HERE 2")
       percent = 0.1
       if (listOfPrices.sum * percent > 20){
         serviceCharge = 20
@@ -47,11 +46,12 @@ object Main extends MenuItem {
         serviceCharge = (listOfPrices.sum * percent).setScale(2, BigDecimal.RoundingMode.HALF_UP)
       }
     }else {
-//      println("I am HERE 3")
       percent = 1
     }
-    println(s"The Service Charge is: £${serviceCharge} (${(percent*100).toInt}%)")
-    val result = listOfPrices.sum + serviceCharge
+    println(s"Total before discount and service charge: £${listOfPrices.sum}")
+    println(s"Your loyalty discount is: £${loyaltyAmount} ${if (loyaltyPerc == 1){""} else {"(" + loyaltyPerc +"%)"} }")
+    println(s"The Service Charge is: £${serviceCharge} ${ if(percent==1){""} else {"(" + (percent*100).toInt + "%)"}}")
+    val result = listOfPrices.sum - loyaltyAmount + serviceCharge
     result
 
   }
@@ -62,7 +62,7 @@ object Main extends MenuItem {
   // Here Option was used because the input can be None
   // Also Either was used because the return value can be either or boolean
   def numberToItem(num:String):Either[Option[ItemCaseClass], Boolean] = {
-    if (num == "No") {
+    if (num == "no") {
       Right(false)
     } else {
       num match {
@@ -77,10 +77,9 @@ object Main extends MenuItem {
   }
 
     def printBasket(listOfItems:List[ItemCaseClass]): Unit ={
-//      val clearedListOfItems:List[String] = listOfItems.map(x => x.name)
-//      println(clearedListOfItems)
+
       val counts = listOfItems.groupBy(identity).mapValues(_.size).toMap
-      println(counts)
+//      println(counts)
       println("        Bill         ")
       println("---------------------")
       counts.foreach {
@@ -89,13 +88,47 @@ object Main extends MenuItem {
       println("---------------------")
     }
 
+  // Checking for Loyalty Card
+  def askingForLoyalty(listOfItems:List[ItemCaseClass]):(BigDecimal,BigDecimal) ={
+    val sumOfBasket = listOfItems.map(x => x.price).sum
+
+    print("Do you have a Loyalty card mate? (yes or no): ")
+    val hasLoyalty = scala.io.StdIn.readLine() // User input
+
+    var loyaltyAmount:BigDecimal = 0
+
+    if (hasLoyalty=="no"){
+      (1,loyaltyAmount)
+    }else if(hasLoyalty=="yes"){
+      print("How many stars do you have: ")
+      val startsNo = scala.io.StdIn.readLine().toInt // User input
+      val loyaltyPercentage:BigDecimal = startsNo match {
+        case x if 3 <= x && x <= 8 => 0.025 * x
+        case x if x>8 => 0.025 * 8
+        case _ => 0
+      }
+      val loyaltyPercentageModified: BigDecimal = (loyaltyPercentage*100).setScale(2, BigDecimal.RoundingMode.HALF_UP)
+//      println("loyaltyPercentage: " + loyaltyPercentageModified)
+      loyaltyAmount = loyaltyAmount + (loyaltyPercentage * sumOfBasket)
+//      println("loyaltyAmount: " + loyaltyAmount)
+
+      (loyaltyPercentageModified.toInt,loyaltyAmount)
+
+    } else{
+      askingForLoyalty(listOfItems)
+    }
+  }
+
+//  def askingForStars(yesOrNo: String):BigDecimal ={
+//
+//  }
 
   // Main function
   def main(args: Array[String]): Unit = {
 
     println("Welcome to Cafe X")
     printMenu()
-    print("What would you like? (Number): ")
+    print("What would you like? (number): ")
 
     var listOfItems:List[Either[Option[ItemCaseClass], Boolean]] = List() // List which stores both the Either ot Boolean
     var FinalListOfItem: List[ItemCaseClass] = List() // List to store the items/objects (without Some()etc)
@@ -116,12 +149,12 @@ object Main extends MenuItem {
       if (newItem == false){ // If the value is false, the user don't need anything else
         continueLoop = false
       } else if (newItem == None){ // If it is None, wrong input was given
-        print("Would you like something else? (Number/No): ")
+        print("Would you like something else? (number or no): ")
       } else {
         listOfItems = listOfItems :+ item
-        println(listOfItems)
-        FinalListOfItem
-        print("Would you like something else? (Number/No): ")
+//        println(listOfItems)
+//        FinalListOfItem
+        print("Would you like something else? (number or no): ")
       }
     }
 
@@ -129,12 +162,12 @@ object Main extends MenuItem {
     FinalListOfItem = listOfItems.map {
       case Left(Some(x)) => x
     }
-    println(FinalListOfItem)
 
-
+    val (loyaltyPerc:BigDecimal, loyaltyAmount:BigDecimal) = askingForLoyalty(FinalListOfItem)
+//     Printing the basket
     printBasket(FinalListOfItem)
     // Calculating the total cost
-    cost = costCalculation(FinalListOfItem)
+    cost = costCalculation(FinalListOfItem,loyaltyPerc,loyaltyAmount).setScale(2, BigDecimal.RoundingMode.HALF_UP)
     println(s"Total Cost: £$cost")
   }
 }
