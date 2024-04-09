@@ -3,7 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/BillGeneration.iml" filepath="$PROJECT_DIR$/.idea/modules/BillGeneration.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/BillGeneration-build.iml" filepath="$PROJECT_DIR$/.idea/modules/BillGeneration-build.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/BillGeneration.BillGeneration-build.iml" filepath="$PROJECT_DIR$/.idea/modules/BillGeneration.BillGeneration-build.iml" />
     </modules>
   </component>
 </project>
