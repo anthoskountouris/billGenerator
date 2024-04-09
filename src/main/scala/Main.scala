@@ -23,7 +23,7 @@ object Main extends MenuItem {
   }
 
   // Function which calculates the total cost
-  def costCalculation(listOfItems:List[ItemCaseClass], loyaltyPerc:BigDecimal, loyaltyAmount:BigDecimal): BigDecimal = {
+  def serviceCharge(listOfItems:List[ItemCaseClass]): BigDecimal = {
     var percent:BigDecimal = 1 // percentage of service charge
     var serviceCharge:BigDecimal = 0 // actual amount of service charge
     val listOfPrices = listOfItems.map(x => x.price) // List of the prices of the items in the basket
@@ -31,31 +31,36 @@ object Main extends MenuItem {
     // Conditions to add service charge in the total cost
     if (listOfItems.exists(_.cat == Category.premium)){
       percent = 0.25
-      if (listOfPrices.sum * percent > 40){
+      if (listOfPrices.sum * percent >= 40){
         serviceCharge = 40
       } else {
         serviceCharge = (listOfPrices.sum * percent).setScale(2, BigDecimal.RoundingMode.HALF_UP)
       }
     }
-    else if (listOfItems.exists(_.typeOfItem == TypeOfItem.food) && listOfItems.exists(_.temp == Temperature.hot)) {
+    else if (listOfItems.exists( item => item.typeOfItem == TypeOfItem.food && item.temp == Temperature.hot)) {
       percent = 0.2
-      serviceCharge = (listOfPrices.sum * percent).setScale(2, BigDecimal.RoundingMode.HALF_UP)
-    } else if (listOfItems.exists(_.typeOfItem == TypeOfItem.food)){
-      percent = 0.1
       if (listOfPrices.sum * percent > 20){
         serviceCharge = 20
-      } else {
+        }else{
         serviceCharge = (listOfPrices.sum * percent).setScale(2, BigDecimal.RoundingMode.HALF_UP)
       }
+    } else if (listOfItems.exists(_.typeOfItem == TypeOfItem.food)){
+      percent = 0.1
+      serviceCharge = (listOfPrices.sum * percent).setScale(2, BigDecimal.RoundingMode.HALF_UP)
     }else {
       percent = 1
     }
     println(s"Total before discount and service charge: £${listOfPrices.sum}")
-    println(s"Your loyalty discount is: £${loyaltyAmount} ${if (loyaltyPerc == 1){""} else {"(" + loyaltyPerc +"%)"} }")
     println(s"The Service Charge is: £${serviceCharge} ${ if(percent==1){""} else {"(" + (percent*100).toInt + "%)"}}")
-    val result = listOfPrices.sum - loyaltyAmount + serviceCharge
-    result
+    serviceCharge
+  }
 
+  // Function that calculates the service charge
+  def costCalculation(listOfItems:List[ItemCaseClass], loyaltyPerc:BigDecimal, loyaltyAmount:BigDecimal, serviceCharge:BigDecimal): BigDecimal ={
+    val listOfPrices = listOfItems.map(x => x.price) // List of the prices of the items in the basket
+    println(s"Your loyalty discount is: £${loyaltyAmount} ${if (loyaltyPerc == 1){""} else {"(" + loyaltyPerc +"%)"} }")
+    val result = listOfPrices.sum - loyaltyAmount + serviceCharge
+    result.setScale(2, BigDecimal.RoundingMode.HALF_UP)
   }
 
   // Function that turns the input number into an item
@@ -94,7 +99,11 @@ object Main extends MenuItem {
 
   @tailrec
   def askingForLoyalty(listOfItems:List[ItemCaseClass], hasLoyalty:String, starsNo:Int):(BigDecimal,BigDecimal) ={
-    val sumOfBasket = listOfItems.map(x => x.price).sum
+    // loyalty discount is applied only to items that are not premium
+    val BasketNonPremium = listOfItems.filter(item => item.cat != Category.premium)
+//    println(sumOfBasketNonPremium)
+    val sumOfBasketNonPremium = BasketNonPremium.map(x => x.price).sum
+//    println(sumOfBasketNonPremium)
     var loyaltyAmount:BigDecimal = 0
 
     if (hasLoyalty=="no"){
@@ -107,7 +116,7 @@ object Main extends MenuItem {
       }
       val loyaltyPercentageModified: BigDecimal = (loyaltyPercentage*100).setScale(1, BigDecimal.RoundingMode.HALF_UP)
 //      println("loyaltyPercentage: " + loyaltyPercentageModified)
-      loyaltyAmount = loyaltyAmount + (loyaltyPercentage * sumOfBasket)
+      loyaltyAmount = loyaltyAmount + (loyaltyPercentage * sumOfBasketNonPremium)
 //      println("loyaltyAmount: " + loyaltyAmount)
 
       (loyaltyPercentageModified,loyaltyAmount.setScale(2, BigDecimal.RoundingMode.HALF_UP))
@@ -165,19 +174,17 @@ object Main extends MenuItem {
       print("How many stars do you have: ")
       starsNo = scala.io.StdIn.readLine().toInt // User input
     }
-
+    // loyalty
     val (loyaltyPerc:BigDecimal, loyaltyAmount:BigDecimal) = askingForLoyalty(FinalListOfItem, hasLoyalty, starsNo)
     println("Output "+loyaltyPerc, loyaltyAmount)
 //     Printing the basket
     printBasket(FinalListOfItem)
+
+    // service charge
+    val serviceChar:BigDecimal = serviceCharge(FinalListOfItem)
+
     // Calculating the total cost
-    cost = costCalculation(FinalListOfItem,loyaltyPerc,loyaltyAmount).setScale(2, BigDecimal.RoundingMode.HALF_UP)
+    cost = costCalculation(FinalListOfItem,loyaltyPerc,loyaltyAmount,serviceChar).setScale(2, BigDecimal.RoundingMode.HALF_UP)
     println(s"Total Cost: £$cost")
   }
 }
-
-// NEED TO DO
-// ** LOYALTY DISCOUNT IS NOT APPLIED TO PREMIUM ITEMS ** //
-// FILTER LIST TO ITEMS WITH NO PREMIUM AND THEN CALCULATE //
-// ** AMEND TEST OF LOYALTY ** //
-// ** ADD TEST OF CALCULATION COST ** //
